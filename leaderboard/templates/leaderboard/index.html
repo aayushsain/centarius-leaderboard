@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centarius Leaderboard Hub</title>
+    <!-- Modern Typography from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Load custom stylesheet -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <span class="pulse-dot"></span>
+                <h1>CENTARIUS</h1>
+                <span class="subtitle">Leaderboards</span>
+            </div>
+            <div class="status-indicator">
+                <span class="live-dot"></span>
+                <span class="live-text">API Online</span>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Panel: Game Selection & Stats -->
+            <section class="panel glassmorphism left-panel">
+                <h2>Active Tournaments</h2>
+                
+                <div class="form-group">
+                    <label for="game-selector">Select Game</label>
+                    <div class="select-wrapper">
+                        <select id="game-selector" class="custom-select">
+                            <option value="" disabled selected>Loading games...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="game-meta-card">
+                    <div class="stat-row">
+                        <span class="stat-label">Total Submissions</span>
+                        <span id="stat-total-players" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Top Score</span>
+                        <span id="stat-top-score" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Current Status</span>
+                        <span class="stat-value active-badge">Live</span>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <!-- Submit Mock Score Panel -->
+                <div class="mock-score-panel">
+                    <h3>Submit Score</h3>
+                    <p class="panel-desc">Test the live conditional upsert API directly below:</p>
+                    <form id="score-form">
+                        <div class="form-group">
+                            <label for="input-game-id">Game ID</label>
+                            <input type="text" id="input-game-id" placeholder="e.g. centarius-run" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-player-id">Player ID</label>
+                            <input type="text" id="input-player-id" placeholder="e.g. player-101" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-display-name">Display Name</label>
+                            <input type="text" id="input-display-name" placeholder="e.g. CyberKnight" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-score">Score</label>
+                            <input type="number" id="input-score" placeholder="e.g. 9850" required min="0">
+                        </div>
+                        <button type="submit" id="submit-btn" class="glow-button">Submit Score</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Right Panel: Leaderboard Table -->
+            <section class="panel glassmorphism right-panel">
+                <div class="panel-header">
+                    <h2 id="leaderboard-title">Leaderboard</h2>
+                    <span class="limit-badge">Top 10 Only</span>
+                </div>
+                
+                <div class="table-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Score</th>
+                                <th>Date Achieved</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- Dynamically loaded rows -->
+                            <tr class="info-row">
+                                <td colspan="4">Please select or submit a game score to load rankings...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Notification System -->
+    <div id="toast-container"></div>
+
+    <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

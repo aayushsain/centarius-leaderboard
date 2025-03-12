@@ -1,0 +1,22 @@
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases
+db.sqlite3
+
+# Static files directory
+staticfiles/
+
+# System and IDE configuration
+.vscode/
+.idea/
+.antigravitycli/
+.DS_Store
+*.log
