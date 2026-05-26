@@ -185,3 +185,13 @@ Returns a list of all active games currently registered in the system.
     {"game_id": "space-invaders", "title": "Space Invaders"}
   ]
   ```
+
+---
+
+## 🛠 Deployment & Troubleshooting
+
+### Database Initialization
+If you encounter a "no such table" error upon deployment, it's likely because the migrations didn't run or the database state is inconsistent.
+1. **Ensure DATABASE_URL is set**: Verify that your production database URL is in your environment variables.
+2. **Manual Migration**: You can manually trigger migrations on Railway by running `python manage.py migrate` via the Railway console/CLI.
+3. **Reset Migrations**: If necessary, you can run `python manage.py migrate --fake-initial` if the tables already exist but aren't recorded in the migrations table.
