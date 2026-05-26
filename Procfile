@@ -1,1 +1,1 @@
-web: gunicorn leaderboard_project.wsgi --log-file -
+web: python manage.py migrate && gunicorn leaderboard_project.wsgi --log-file -
