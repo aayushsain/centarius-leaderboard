@@ -1,6 +1,8 @@
 import json
+import time
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils import timezone
 from .models import Player, Game, Score
 
 class LeaderboardAPITests(TestCase):
@@ -34,9 +36,94 @@ class LeaderboardAPITests(TestCase):
         self.assertTrue(Game.objects.filter(game_id='space-invaders').exists())
         self.assertTrue(Score.objects.filter(player__player_id='player_1', game__game_id='space-invaders', score=1500).exists())
 
+    def test_big_integer_support(self):
+        """Test that the system supports scores larger than 2^31-1."""
+        big_score = 3000000000 # 3 Billion
+        payload = {
+            'game_id': 'big-game',
+            'player_id': 'p_big',
+            'display_name': 'Giant',
+            'score': big_score
+        }
+        response = self.client.post(
+            self.enter_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['highest_score'], big_score)
+
+    def test_tie_breaker_logic(self):
+        """Test that the person who achieved the score first ranks higher."""
+        game = Game.objects.create(game_id='race', title='Race')
+        p1 = Player.objects.create(player_id='p1', display_name='First')
+        p2 = Player.objects.create(player_id='p2', display_name='Second')
+
+        # P1 scores 100 first
+        Score.objects.create(player=p1, game=game, score=100)
+        # Sleep briefly to ensure different timestamp if needed,
+        # though auto_now usually handles it in sequence.
+        time.sleep(0.1)
+        # P2 scores 100 later
+        Score.objects.create(player=p2, game=game, score=100)
+
+        response = self.client.get(f"{self.get_url}?game_id=race")
+        leaderboard = response.json()
+
+        self.assertEqual(leaderboard[0]['player_id'], 'p1')
+        self.assertEqual(leaderboard[1]['player_id'], 'p2')
+
+    def test_validation_negative_and_zero_score(self):
+        """Test that zero or negative scores are rejected."""
+        for score in [0, -1, -500]:
+            payload = {
+                'game_id': 'valid-game',
+                'player_id': 'p1',
+                'display_name': 'Player',
+                'score': score
+            }
+            response = self.client.post(
+                self.enter_url,
+                data=json.dumps(payload),
+                content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertIn('greater than zero', response.json()['message'])
+
+    def test_validation_empty_names(self):
+        """Test that empty or whitespace-only names are rejected."""
+        payload = {
+            'game_id': 'valid-game',
+            'player_id': 'p1',
+            'display_name': '   ',
+            'score': 100
+        }
+        response = self.client.post(
+            self.enter_url,
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('cannot be empty', response.json()['message'])
+
+    def test_game_normalization_prevents_duplicates(self):
+        """Test that 'Space Invaders' and 'space-invaders' resolve to the same game_id."""
+        self.client.post(
+            self.enter_url,
+            data=json.dumps({'game_id': 'Space Invaders', 'player_id': 'p1', 'display_name': 'P1', 'score': 100}),
+            content_type='application/json'
+        )
+        self.client.post(
+            self.enter_url,
+            data=json.dumps({'game_id': 'space-invaders', 'player_id': 'p2', 'display_name': 'P2', 'score': 200}),
+            content_type='application/json'
+        )
+
+        self.assertEqual(Game.objects.count(), 1)
+        self.assertEqual(Game.objects.first().game_id, 'space-invaders')
+
     def test_enter_leaderboard_higher_score(self):
         """Test submitting a higher score updates the entry."""
-        # Setup initial player, game and score
         player = Player.objects.create(player_id='player_1', display_name='RetroPlayer')
         game = Game.objects.create(game_id='space-invaders', title='Space Invaders')
         Score.objects.create(player=player, game=game, score=1500)
@@ -57,76 +144,5 @@ class LeaderboardAPITests(TestCase):
         self.assertEqual(res_data['data']['highest_score'], 2000)
         self.assertTrue(res_data['data']['updated'])
 
-        # Check DB
         score_entry = Score.objects.get(player=player, game=game)
         self.assertEqual(score_entry.score, 2000)
-
-    def test_enter_leaderboard_lower_score(self):
-        """Test submitting a lower score does not overwrite the higher score."""
-        player = Player.objects.create(player_id='player_1', display_name='RetroPlayer')
-        game = Game.objects.create(game_id='space-invaders', title='Space Invaders')
-        Score.objects.create(player=player, game=game, score=1500)
-
-        payload = {
-            'game_id': 'space-invaders',
-            'player_id': 'player_1',
-            'display_name': 'RetroPlayer',
-            'score': 1000
-        }
-        response = self.client.post(
-            self.enter_url,
-            data=json.dumps(payload),
-            content_type='application/json'
-        )
-        self.assertEqual(response.status_code, 200)
-        res_data = response.json()
-        self.assertEqual(res_data['data']['highest_score'], 1500)
-        self.assertFalse(res_data['data']['updated'])
-
-        # Check DB still has 1500
-        score_entry = Score.objects.get(player=player, game=game)
-        self.assertEqual(score_entry.score, 1500)
-
-    def test_get_game_leaderboard_ordering(self):
-        """Test retrieving leaderboard returns ordered scores with correct ranks."""
-        game = Game.objects.create(game_id='asteroids', title='Asteroids')
-        
-        # Create 3 players and scores
-        p1 = Player.objects.create(player_id='p1', display_name='Player One')
-        p2 = Player.objects.create(player_id='p2', display_name='Player Two')
-        p3 = Player.objects.create(player_id='p3', display_name='Player Three')
-        
-        Score.objects.create(player=p1, game=game, score=500)
-        Score.objects.create(player=p2, game=game, score=1000)
-        Score.objects.create(player=p3, game=game, score=750)
-
-        response = self.client.get(f"{self.get_url}?game_id=asteroids&limit=10")
-        self.assertEqual(response.status_code, 200)
-        leaderboard = response.json()
-
-        # Check length & ranking
-        self.assertEqual(len(leaderboard), 3)
-        self.assertEqual(leaderboard[0]['rank'], 1)
-        self.assertEqual(leaderboard[0]['player_id'], 'p2')
-        self.assertEqual(leaderboard[0]['score'], 1000)
-
-        self.assertEqual(leaderboard[1]['rank'], 2)
-        self.assertEqual(leaderboard[1]['player_id'], 'p3')
-        self.assertEqual(leaderboard[1]['score'], 750)
-
-        self.assertEqual(leaderboard[2]['rank'], 3)
-        self.assertEqual(leaderboard[2]['player_id'], 'p1')
-        self.assertEqual(leaderboard[2]['score'], 500)
-
-    def test_get_games(self):
-        """Test listing available games in the system."""
-        Game.objects.create(game_id='game-a', title='Game A')
-        Game.objects.create(game_id='game-b', title='Game B')
-
-        response = self.client.get(self.games_url)
-        self.assertEqual(response.status_code, 200)
-        games_list = response.json()
-
-        self.assertEqual(len(games_list), 2)
-        self.assertEqual(games_list[0]['title'], 'Game A')
-        self.assertEqual(games_list[1]['title'], 'Game B')

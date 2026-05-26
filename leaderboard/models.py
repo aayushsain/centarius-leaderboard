@@ -19,14 +19,14 @@ class Game(models.Model):
 class Score(models.Model):
     player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='scores')
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='scores')
-    score = models.IntegerField()
+    score = models.BigIntegerField()
     date_saved = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('player', 'game')
-        ordering = ['-score']
+        ordering = ['-score', 'date_saved']
         indexes = [
-            models.Index(fields=['game', '-score']),
+            models.Index(fields=['game', '-score', 'date_saved']),
         ]
 
     def __str__(self):

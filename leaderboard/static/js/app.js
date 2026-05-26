@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputScore.value = '';
                 
                 // Refresh list and select the game we just submitted to
-                const gameKey = gameId.toLowerCase();
+                const gameKey = result.data.game_id;
                 await loadGames(gameKey);
             }
 
@@ -230,10 +230,10 @@ document.addEventListener('DOMContentLoaded', () => {
         async function poll() {
             await loadLeaderboard(gameId);
             // Schedule next execution strictly after the current request resolves
-            pollingTimeout = setTimeout(poll, 10000);
+            pollingTimeout = setTimeout(poll, 3000);
         }
         
-        pollingTimeout = setTimeout(poll, 10000); // Wait 10 seconds before the first automatic poll
+        pollingTimeout = setTimeout(poll, 3000); // Wait 10 seconds before the first automatic poll
     }
 
     // HTML sanitizer helper
