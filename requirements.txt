@@ -1,0 +1,5 @@
+django>=6.0.0,<7.0.0
+whitenoise>=6.0.0,<7.0.0
+gunicorn>=26.0.0,<27.0.0
+dj-database-url
+psycopg2-binary

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CENTARIUS — Gamified Speedrun Standings</title>
+    <!-- Premium Google Fonts: Syne for titles, Plus Jakarta Sans for UI, Space Mono for statistics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Advanced High-End Frontend Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Load custom stylesheet -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <!-- Cyberpunk animated particle background & CRT scanlines -->
+    <canvas id="live-bg-canvas"></canvas>
+    <div class="crt-scanlines"></div>
+
+    <div class="container">
+        <!-- Premium Header Area -->
+        <header>
+            <div class="brand">
+                <!-- Glowing customized gaming SVG logo -->
+                <svg class="site-logo" width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="15" y="15" width="70" height="70" rx="8" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                    <polygon points="50,25 75,65 25,65" stroke="currentColor" stroke-width="4" stroke-linejoin="round" fill="none"/>
+                    <circle cx="50" cy="52" r="10" fill="currentColor"/>
+                    <path d="M15 50 H85" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
+                </svg>
+                <div class="brand-text">
+                    <h1>CENTARIUS</h1>
+                    <span class="mono-tag">GAMING NET // v2.0.4</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="cmd-trigger-btn" id="cmd-trigger-shortcut" aria-label="Open Command Menu Menu (⌘ K)">
+                    <span>COMMANDS</span>
+                    <kbd>⌘&nbsp;K</kbd>
+                </button>
+                <div class="system-status">
+                    <span class="pulse-dot"></span>
+                    <span class="status-lbl">LIVE LINK // SECURE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Split Layout -->
+        <main class="dashboard-layout">
+            
+            <!-- SECTION 1: Control & Context (Left Panel) -->
+            <section class="panel control-panel">
+                <div class="section-meta">
+                    <span class="mono-num"><i data-lucide="gamepad-2"></i> 01 / TOURNAMENTS</span>
+                </div>
+                <h2>Arena Roster</h2>
+                <p class="section-intro">Select from the active databases below to review detailed ratings, analytics, and 3D character archetypes.</p>
+
+                <!-- Custom Selector -->
+                <div class="form-group margin-bottom-lg">
+                    <label for="game-selector" class="mono-label">CHOOSE ARENA</label>
+                    <div class="game-tabs" id="game-tabs">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                    <div class="custom-select-container" style="display: none;">
+                        <select id="game-selector">
+                            <option value="" disabled selected>Querying game servers...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Stats Display Panel -->
+                <div class="stat-card" data-tilt data-tilt-max="5" data-tilt-speed="800">
+                    <div class="stat-card-header">
+                        <span class="mono-label"><i data-lucide="bar-chart-2"></i> LIVE STATS</span>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <span class="stat-lbl">PLAYERS</span>
+                            <span id="stat-total-players" class="stat-val">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-lbl">TOP RATING</span>
+                            <span id="stat-top-score" class="stat-val">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sleek Minimalist Analytical Chart -->
+                <div class="chart-box">
+                    <span class="mono-label"><i data-lucide="trending-up"></i> ARENA SPREAD (TOP 5)</span>
+                    <div class="chart-container">
+                        <canvas id="leaderboard-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Interactive Accordion Form for Score Entry -->
+                <div class="action-accordion">
+                    <button class="accordion-trigger" id="form-trigger">
+                        <span><i data-lucide="plus-square"></i> TRANSMIT NEW ATTEMPT</span>
+                        <span class="arrow-icon">→</span>
+                    </button>
+                    <div class="accordion-content" id="form-content">
+                        <form id="score-form">
+                            <div class="form-group">
+                                <label for="input-game-id" class="mono-label">ARENA ID</label>
+                                <input type="text" id="input-game-id" placeholder="e.g. space-invaders" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-player-id" class="mono-label">PLAYER UID</label>
+                                <input type="text" id="input-player-id" placeholder="e.g. arcade_ace" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-display-name" class="mono-label">PLAYER DISPLAY NAME</label>
+                                <input type="text" id="input-display-name" placeholder="e.g. ArcadeAce" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="input-score" class="mono-label">ACHIEVED RATING</label>
+                                <input type="number" id="input-score" placeholder="e.g. 150000" required min="1">
+                            </div>
+                            <button type="submit" id="submit-btn" class="btn-primary">SUBMIT RUN RECORD</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: 3D Stage (Centerpiece) -->
+            <section class="stage-panel">
+                <div class="section-meta">
+                    <span class="mono-num"><i data-lucide="layers"></i> 02 / 3D ARCHETYPE STAGE</span>
+                </div>
+                
+                <div class="stage-container">
+                    <!-- Three.js Canvas -->
+                    <canvas id="three-canvas"></canvas>
+
+                    <!-- Interactive HUD Overlays -->
+                    <div class="stage-hud-top">
+                        <span class="stage-badge"><span class="fps-dot"></span> 60FPS ENGINE RUNNING</span>
+                        <span class="stage-coordinates" id="hud-coordinates">X: 0.00 Y: 0.00</span>
+                    </div>
+
+                    <div class="stage-hud-bottom">
+                        <div class="hud-controls">
+                            <button id="btn-spin" class="hud-btn" title="Inspect character details">
+                                <i data-lucide="rotate-cw"></i>
+                                <span>SPIN</span>
+                            </button>
+                            <button id="btn-grid" class="hud-btn active" title="Toggle floor grid lines">
+                                <i data-lucide="grid"></i>
+                                <span>GRID</span>
+                            </button>
+                        </div>
+                        <div class="stage-active-label">
+                            <span class="mono-label">REPRESENTATIVE MESH</span>
+                            <h3 id="current-model-title">LOADING...</h3>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Rankings Table (Right Panel) -->
+            <section class="panel leaderboard-panel">
+                <div class="section-meta">
+                    <span class="mono-num"><i data-lucide="trophy"></i> 03 / LEAGUE ARCHIVES</span>
+                </div>
+                <div class="panel-header">
+                    <h2 id="leaderboard-title">Standings</h2>
+                    <span class="mono-tag-badge">MAX SPEEDRUN</span>
+                </div>
+
+                <!-- Dribbble-Style Top 3 Podium Cards Grid -->
+                <div class="podium-container">
+                    <!-- 2nd Place Card -->
+                    <div class="podium-card rank-2-card" data-tilt data-tilt-max="5" data-tilt-speed="800">
+                        <div class="podium-avatar-wrapper">
+                            <span class="podium-rank-badge rank-2">02</span>
+                            <div class="podium-avatar silver-glow">
+                                <i data-lucide="user"></i>
+                            </div>
+                        </div>
+                        <span class="podium-name" id="podium-2-name">LOCK // EMPTY</span>
+                        <span class="podium-score" id="podium-2-score">-</span>
+                        <span class="podium-label">RUNNER-UP</span>
+                    </div>
+
+                    <!-- 1st Place Card (Taller centerpiece) -->
+                    <div class="podium-card rank-1-card" data-tilt data-tilt-max="5" data-tilt-speed="800">
+                        <div class="podium-crown">
+                            <i data-lucide="crown"></i>
+                        </div>
+                        <div class="podium-avatar-wrapper">
+                            <span class="podium-rank-badge rank-1">01</span>
+                            <div class="podium-avatar gold-glow">
+                                <i data-lucide="user"></i>
+                            </div>
+                        </div>
+                        <span class="podium-name" id="podium-1-name">LOCK // EMPTY</span>
+                        <span class="podium-score" id="podium-1-score">-</span>
+                        <span class="podium-label">ARENA CHAMPION</span>
+                    </div>
+
+                    <!-- 3rd Place Card -->
+                    <div class="podium-card rank-3-card" data-tilt data-tilt-max="5" data-tilt-speed="800">
+                        <div class="podium-avatar-wrapper">
+                            <span class="podium-rank-badge rank-3">03</span>
+                            <div class="podium-avatar bronze-glow">
+                                <i data-lucide="user"></i>
+                            </div>
+                        </div>
+                        <span class="podium-name" id="podium-3-name">LOCK // EMPTY</span>
+                        <span class="podium-score" id="podium-3-score">-</span>
+                        <span class="podium-label">CONTENDER</span>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>RANK</th>
+                                <th>PLAYER MONIKER</th>
+                                <th>SCORE</th>
+                                <th>RECORDED TIME</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <tr class="info-row">
+                                <td colspan="4">Quering regional gaming databases...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Minimalist footer -->
+        <footer>
+            <span class="mono-lbl">© 2026 CENTARIUS LEAGUE INDUSTRIES INC.</span>
+            <span class="mono-lbl">CORE PROTOCOL DX-20 // ENDPOINT OPEN</span>
+        </footer>
+    </div>
+
+    <!-- Vercel-Style Command Menu Overlay -->
+    <div id="cmd-menu-overlay" class="cmd-overlay" role="dialog" aria-modal="true" aria-label="Command Menu" style="display: none;">
+        <div class="cmd-dialog">
+            <div class="cmd-header">
+                <i data-lucide="search" class="cmd-search-icon"></i>
+                <input type="text" id="cmd-search-input" placeholder="Type a command or search arenas…" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="cmd-listbox">
+                <span class="cmd-esc-badge">ESC</span>
+            </div>
+            <div class="cmd-body">
+                <div id="cmd-listbox" role="listbox" aria-label="Command Actions">
+                    
+                    <!-- Group 1: Navigation/Arenas -->
+                    <div class="cmd-group">
+                        <span class="cmd-group-title">ARENAS</span>
+                        <div class="cmd-item active" role="option" data-action="arena" data-value="centarius-run" aria-selected="true">
+                            <span class="cmd-item-label"><i data-lucide="rocket"></i> Centarius Run</span>
+                            <span class="cmd-shortcut">⌥&nbsp;1</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="arena" data-value="space-invaders" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="gamepad-2"></i> Space Invaders</span>
+                            <span class="cmd-shortcut">⌥&nbsp;2</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="arena" data-value="pac-man" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="smile"></i> Pac-Man</span>
+                            <span class="cmd-shortcut">⌥&nbsp;3</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="arena" data-value="asteroids" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="orbit"></i> Asteroids</span>
+                            <span class="cmd-shortcut">⌥&nbsp;4</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="arena" data-value="cyber-knight" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="shield"></i> Cyber Knight</span>
+                            <span class="cmd-shortcut">⌥&nbsp;5</span>
+                        </div>
+                    </div>
+
+                    <!-- Group 2: Actions & HUD toggles -->
+                    <div class="cmd-group">
+                        <span class="cmd-group-title">COMMANDS</span>
+                        <div class="cmd-item" role="option" data-action="inspect" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="rotate-cw"></i> Spin & Inspect Archetype</span>
+                            <span class="cmd-shortcut">⌘&nbsp;I</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="toggle-grid" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="grid"></i> Toggle Coordinates Floor</span>
+                            <span class="cmd-shortcut">⌘&nbsp;G</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="toggle-chart" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="trending-up"></i> Toggle Analytics Card</span>
+                            <span class="cmd-shortcut">⌘&nbsp;A</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="open-form" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="plus-square"></i> Open Record Submission Drawer</span>
+                            <span class="cmd-shortcut">⌘&nbsp;E</span>
+                        </div>
+                        <div class="cmd-item" role="option" data-action="mock-score" aria-selected="false">
+                            <span class="cmd-item-label"><i data-lucide="sparkles"></i> Simulate Instant Mock Run</span>
+                            <span class="cmd-shortcut">⌘&nbsp;M</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="cmd-footer">
+                <div class="cmd-footer-nav">
+                    <span><kbd>↑↓</kbd> Navigation</span>
+                    <span><kbd>↵</kbd> Confirm Selection</span>
+                </div>
+                <div class="cmd-footer-hint">
+                    Press <kbd>⌘</kbd> <kbd>K</kbd> to toggle menu
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification System -->
+    <div id="toast-container"></div>
+
+    <!-- Inject JS logic -->
+    <script src="{% static 'js/app.js' %}"></script>
+    <script>
+        // Initialize Lucide Icons on load
+        window.addEventListener('load', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+</html>
